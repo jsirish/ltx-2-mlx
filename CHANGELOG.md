@@ -12,6 +12,22 @@ stability guarantees.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Stage-2 sigma schedule now always terminates at 0.0**, fixing corrupted
+  output (clean first frame → heavy colour speckle) whenever `stage2_steps < 3`.
+  The two-stage pipelines resolved their stage-2 schedule by prefix-slicing the
+  fixed `STAGE_2_SIGMAS` table (`STAGE_2_SIGMAS[:stage2_steps + 1]`), which drops
+  the terminal `0.0` for any step count below 3 — so `denoise_loop` stopped at a
+  non-zero sigma and handed the VAE a partially-noised latent, rendered as
+  speckle. Introduces `scheduler.stage2_sigmas()` (always appends the terminal
+  `0.0`) and routes all seven two-stage pipelines through it
+  (`a2vid_two_stage`, `ti2vid_two_stages`, `ti2vid_two_stages_hq`,
+  `keyframe_interpolation`, `ic_lora`, `distilled`, `lipdub`). The supported
+  `stage2_steps=3` case is byte-identical to before; `stage2_steps ∈ {1, 2}` now
+  terminate cleanly instead of corrupting. Regression-tested in
+  `tests/test_scheduler.py::TestStage2SigmasHelper`.
+
 ## [0.14.11] - 2026-06-08
 
 Fixes audio cross-modal gating (speech / lip-sync) by reading the
